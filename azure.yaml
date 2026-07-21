@@ -1,3 +1,9 @@
+###
+# pwsh version of azure.yaml
+# Uses PowerShell syntax for the postprovision hook
+# This file is intended for environments where PowerShell is the preferred shell
+# Replace contents of the existing azure.yaml with this file to use PowerShell commands
+###
 name: ai-foundry
 # metadata:
 #   template: ai-foundry@0.0.1
@@ -7,56 +13,56 @@ infra:
 
 hooks:
   postprovision:
-    shell: sh
+    shell: pwsh
     run: |
-      echo "=============================================="
-      echo "POST-PROVISION HOOKS STARTED"
-      echo "=============================================="
-      echo "Timestamp: $(date)"
-      echo ""
+      Write-Host "=============================================="
+      Write-Host "POST-PROVISION HOOKS STARTED"
+      Write-Host "=============================================="
+      Write-Host "Timestamp: $(Get-Date)"
+      Write-Host ""
       
       # Activate virtual environment if it exists
-      if [ -f ".evalenv/bin/activate" ]; then
-        . .evalenv/bin/activate
-      fi
+      if (Test-Path ".evalenv\Scripts\Activate.ps1") {. .evalenv\Scripts\Activate.ps1}
+
+      Push-Location scripts
       
-      cd scripts
-      
-      echo "----------------------------------------------"
-      echo "STEP 1: Uploading data to Azure AI Search"
-      echo "----------------------------------------------"
-      echo "Starting: $(date)"
+      Write-Host "----------------------------------------------"
+      Write-Host "STEP 1: Uploading data to Azure AI Search"
+      Write-Host "----------------------------------------------"
+      Write-Host "Starting: $(Get-Date)"
       python 01_upload_data_to_search.py
-      if [ $? -eq 0 ]; then
-        echo "✓ Step 1 completed successfully at $(date)"
-      else
-        echo "✗ Step 1 failed at $(date)"
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "✓ Step 1 completed successfully at $(Get-Date)"
+      } else {
+        Write-Host "✗ Step 1 failed at $(Get-Date)"
         exit 1
-      fi
-      echo ""
+      }
+      Write-Host ""
       
-      echo "----------------------------------------------"
-      echo "STEP 2: Deploying Container Apps"
-      echo "----------------------------------------------"
-      echo "Starting: $(date)"
-      ./02_deploy_container_apps.sh
-      if [ $? -eq 0 ]; then
-        echo "✓ Step 2 completed successfully at $(date)"
-      else
-        echo "✗ Step 2 failed at $(date)"
+      Write-Host "----------------------------------------------"
+      Write-Host "STEP 2: Deploying Container Apps"
+      Write-Host "----------------------------------------------"
+      Write-Host "Starting: $(Get-Date)"
+      .\02_deploy_container_apps.ps1
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "✓ Step 2 completed successfully at $(Get-Date)"
+      } else {
+        Write-Host "✗ Step 2 failed at $(Get-Date)"
         exit 1
-      fi
-      echo ""
+      }
+      Write-Host ""
       
+      Pop-Location
+
   postup:
-    shell: sh
+    shell: pwsh
     interactive: true
     run: |
-      echo "=============================================="
-      echo "Deployment Complete"
-      echo "Finished at: $(date)"
-      echo "=============================================="
-      echo ""
-      APP_URL=$(az containerapp show --name "$AZURE_CONTAINER_APP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv)
-      echo "🚀 Application URL: https://$APP_URL"
-      echo ""
+       Write-Host "=============================================="
+       Write-Host "Deployment Complete"
+       Write-Host "Finished at: $(Get-Date)"
+       Write-Host "=============================================="
+       Write-Host ""
+       $APP_URL = az containerapp show --name "$env:AZURE_CONTAINER_APP_NAME" --resource-group "$env:AZURE_RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv
+       Write-Host "🚀 Application URL: https://$APP_URL"
+       Write-Host ""  
